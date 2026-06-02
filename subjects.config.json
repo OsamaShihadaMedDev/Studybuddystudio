@@ -1,0 +1,95 @@
+{
+  "subjects": [
+    {
+      "name": "Cardiovascular",
+      "prefix": "CV",
+      "folder": "cardiovascular",
+      "domains": [
+        "Anatomy",
+        "Embryology",
+        "Histopathology",
+        "Pathology",
+        "Physiology",
+        "Pharmacology"
+      ]
+    },
+    {
+      "name": "Renal",
+      "prefix": "RE",
+      "folder": "renal",
+      "domains": [
+        "Anatomy",
+        "Physiology",
+        "Pathology",
+        "Pharmacology"
+      ]
+    },
+    {
+      "name": "Gastrointestinal",
+      "prefix": "GI",
+      "folder": "gastrointestinal",
+      "domains": [
+        "Anatomy",
+        "Physiology",
+        "Pathology",
+        "Pharmacology",
+        "Embryology"
+      ]
+    },
+    {
+      "name": "Respiratory",
+      "prefix": "RS",
+      "folder": "respiratory",
+      "domains": [
+        "Anatomy",
+        "Physiology",
+        "Pathology",
+        "Pharmacology"
+      ]
+    },
+    {
+      "name": "Neurology",
+      "prefix": "NE",
+      "folder": "neurology",
+      "domains": [
+        "Anatomy",
+        "Physiology",
+        "Pathology",
+        "Pharmacology",
+        "Embryology"
+      ]
+    },
+    {
+      "name": "Musculoskeletal",
+      "prefix": "MS",
+      "folder": "musculoskeletal",
+      "domains": [
+        "Anatomy",
+        "Physiology",
+        "Pathology",
+        "Pharmacology"
+      ]
+    },
+    {
+      "name": "Endocrine",
+      "prefix": "EN",
+      "folder": "endocrine",
+      "domains": [
+        "Anatomy",
+        "Physiology",
+        "Pathology",
+        "Pharmacology"
+      ]
+    },
+    {
+      "name": "Hematology",
+      "prefix": "HE",
+      "folder": "hematology",
+      "domains": [
+        "Physiology",
+        "Pathology",
+        "Pharmacology"
+      ]
+    }
+  ]
+}

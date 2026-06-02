@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StudyBuddy QBank Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg-card:   rgba(255,255,255,0.03);
+    --bg-input:  rgba(255,255,255,0.04);
+    --bg-input-focus: rgba(255,255,255,0.06);
+    --border:    rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.18);
+    --text:      #e6edf3;
+    --text-dim:  #8b949e;
+    --text-faint:#6e7681;
+    --teal:      #00b4d8;
+    --teal-dim:  rgba(0,180,216,0.15);
+    --green:     #00c896;
+    --green-dim: rgba(0,200,150,0.15);
+    --amber:     #f4a261;
+    --amber-dim: rgba(244,162,97,0.15);
+    --red:       #e5534b;
+    --red-dim:   rgba(229,83,75,0.15);
+    --mono:      'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --sans:      'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Header ───────────────────────────────────────────── */
+  header.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+  }
+  header.app-header .brand {
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+  header.app-header .brand .accent { color: var(--teal); }
+  header.app-header .version {
+    font-family: var(--mono);
+    color: var(--text-faint);
+    font-size: 12px;
+  }
+
+  /* ── Main layout ──────────────────────────────────────── */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 60% 40%;
+    gap: 0;
+    overflow: hidden;
+  }
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .form-col, .dash-col {
+    padding: 20px 24px;
+    overflow-y: auto;
+    height: calc(100vh - 53px - var(--log-h, 40px));
+  }
+  .form-col { border-right: 1px solid var(--border); }
+
+  /* ── Section headers ─────────────────────────────────── */
+  .section {
+    margin-bottom: 24px;
+    padding: 18px 18px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Form fields ─────────────────────────────────────── */
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  input[type="text"], textarea, select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 0;
+    outline: none;
+    transition: border-color 80ms, background 80ms;
+  }
+  textarea {
+    font-family: var(--mono);
+    font-size: 13px;
+    resize: vertical;
+    min-height: 80px;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--teal);
+    background: var(--bg-input-focus);
+  }
+  input.invalid, textarea.invalid { border-color: var(--red); }
+  select { appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+                      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+  }
+
+  .field-error {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    margin-top: 4px;
+    min-height: 14px;
+  }
+
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 12px; }
+
+  /* ── ID validation status ─────────────────────────────── */
+  .id-status {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    margin-top: 6px;
+    min-height: 16px;
+    letter-spacing: 0.02em;
+  }
+  .id-status.ok { color: var(--green); }
+  .id-status.exists { color: var(--red); }
+  .id-status.invalid { color: var(--amber); }
+
+  /* ── Option rows ─────────────────────────────────────── */
+  .option-row {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .option-letter {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--teal);
+    text-align: center;
+  }
+
+  /* ── Paste sub-state ─────────────────────────────────── */
+  .paste-area {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    min-height: 260px;
+  }
+  .paste-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    gap: 12px;
+  }
+  .link-btn {
+    background: transparent;
+    border: none;
+    color: var(--teal);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    padding: 6px 4px;
+    text-transform: none;
+  }
+  .link-btn:hover:not(:disabled) { text-decoration: underline; filter: none; }
+
+  /* ── Media drop zones ────────────────────────────────── */
+  .media-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .dropzone {
+    border: 1.5px dashed var(--border-strong);
+    background: rgba(0,0,0,0.15);
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 80ms, background 80ms;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 200px;
+  }
+  .dropzone.dragover {
+    border-style: solid;
+    border-color: var(--teal);
+    background: var(--teal-dim);
+  }
+  .dropzone-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .dropzone-hint { color: var(--text-faint); font-size: 12px; }
+  .dropzone-preview {
+    max-width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+    display: none;
+    margin: 0 auto;
+  }
+  .dropzone-preview.visible { display: block; }
+  .dropzone .filename {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--teal);
+    margin-top: 4px;
+    word-break: break-all;
+  }
+  .type-select-wrap { display: flex; align-items: center; gap: 6px; }
+  .type-select-wrap label { margin: 0; flex-shrink: 0; }
+
+  /* ── Buttons ─────────────────────────────────────────── */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  button {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border: 1px solid var(--teal);
+    background: var(--teal);
+    color: #0d1117;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 80ms, color 80ms, border-color 80ms;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--teal);
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-faint);
+    border-color: var(--border);
+    cursor: not-allowed;
+  }
+  button.success { background: var(--green); border-color: var(--green); color: #0d1117; }
+  button.error   { background: var(--amber); border-color: var(--amber); color: #0d1117; }
+  button.spinner::before {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 10px;
+    margin-right: 8px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+    vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .new-question-row { margin-top: 14px; display: none; }
+  .new-question-row.visible { display: block; }
+
+  /* ── Dashboard ───────────────────────────────────────── */
+  .dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .dash-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .refresh-btn {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .refresh-btn:hover { color: var(--teal); border-color: var(--teal); }
+
+  .qtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .qtable th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .qtable td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .qtable tr.qrow { cursor: pointer; transition: background 80ms; }
+  .qtable tr.qrow:hover { background: rgba(255,255,255,0.02); }
+  .qtable tr.qrow.expanded { background: rgba(0,180,216,0.04); }
+
+  .qid { font-family: var(--mono); color: var(--teal); font-size: 12.5px; white-space: nowrap; }
+  .qdomain { color: var(--text-dim); font-size: 12.5px; }
+  .qtopic {
+    color: var(--text);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .qmedia { text-align: center; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+  .badge.easy   { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+  .badge.medium { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
+  .badge.hard   { color: var(--red);   border-color: var(--red);   background: var(--red-dim); }
+
+  .qdetail {
+    padding: 14px 16px 18px;
+    background: rgba(0,0,0,0.25);
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .qdetail h4 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 12px 0 6px;
+  }
+  .qdetail h4:first-child { margin-top: 0; }
+  .qdetail .qtext { color: var(--text); margin-bottom: 8px; line-height: 1.55; }
+  .qdetail .opt {
+    padding: 5px 8px;
+    margin-bottom: 3px;
+    font-size: 12.5px;
+    border-left: 2px solid transparent;
+  }
+  .qdetail .opt .letter { font-family: var(--mono); font-weight: 600; margin-right: 8px; color: var(--text-dim); }
+  .qdetail .opt.correct { background: var(--teal-dim); border-left-color: var(--teal); }
+  .qdetail .opt.correct .letter { color: var(--teal); }
+  .qdetail .folder {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-faint);
+    word-break: break-all;
+  }
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+
+  /* ── Log panel ───────────────────────────────────────── */
+  .log-panel {
+    border-top: 1px solid var(--border);
+    background: #0a0e13;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 40px;
+    transition: height 120ms ease;
+  }
+  .log-panel.expanded { height: 220px; }
+  .log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .log-head .arrow { display: inline-block; width: 14px; }
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 16px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+    display: none;
+  }
+  .log-panel.expanded .log-body { display: block; }
+  .log-line { white-space: pre-wrap; word-break: break-word; }
+  .log-line.ok   { color: var(--green); }
+  .log-line.err  { color: var(--red); }
+  .log-line.warn { color: var(--amber); }
+  .log-line.dim  { color: var(--text-faint); }
+  .clear-btn {
+    background: transparent;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .clear-btn:hover { color: var(--teal); border-color: var(--teal); }
+
+  /* ── Scrollbars ───────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">▸ <span class="accent">StudyBuddy</span> QBank Studio</div>
+  <div class="version">v1.0</div>
+</header>
+
+<main>
+  <!-- ───────────── LEFT: FORM COLUMN ───────────── -->
+  <section class="form-col">
+
+    <!-- METADATA -->
+    <div class="section">
+      <h3 class="section-title">Metadata</h3>
+      <div class="grid-4">
+        <div class="field">
+          <label for="f-subject">Subject</label>
+          <select id="f-subject"></select>
+          <div class="field-error" data-error-for="subject"></div>
+        </div>
+        <div class="field">
+          <label for="f-domain">Domain</label>
+          <select id="f-domain"></select>
+          <div class="field-error" data-error-for="domain"></div>
+        </div>
+        <div class="field">
+          <label for="f-difficulty">Difficulty</label>
+          <select id="f-difficulty">
+            <option value="Easy">Easy</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-reasoning">Reasoning Order</label>
+          <select id="f-reasoning">
+            <option value="1st">1st</option>
+            <option value="2nd" selected>2nd</option>
+            <option value="3rd">3rd</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="f-id">External ID</label>
+          <input id="f-id" type="text" placeholder="CV-HISTO-013" autocomplete="off">
+          <div class="id-status" id="id-status"></div>
+        </div>
+        <div class="field">
+          <label for="f-competency">Competency</label>
+          <select id="f-competency">
+            <option value="Foundational Science">Foundational Science</option>
+            <option value="Diagnosis – H&P">Diagnosis – H&P</option>
+            <option value="Diagnosis – Formulating">Diagnosis – Formulating</option>
+            <option value="Management – Pharmacotherapy">Management – Pharmacotherapy</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUESTION (two sub-states) -->
+    <div class="section">
+      <h3 class="section-title">Question</h3>
+
+      <!-- Sub-state A: paste -->
+      <div id="questionPasteState">
+        <textarea id="questionPasteArea" class="paste-area" rows="12"
+          placeholder="Paste full question text from v6 prompt here (vignette, options, explanation, teaching point)…"></textarea>
+        <div class="paste-actions">
+          <button id="parseBtn">Parse</button>
+          <button id="goManualBtn" class="link-btn">Enter manually →</button>
+        </div>
+      </div>
+
+      <!-- Sub-state B: edit -->
+      <div id="questionEditState" style="display:none">
+        <div class="field">
+          <label for="topic">Topic</label>
+          <input id="topic" type="text" autocomplete="off">
+          <div class="field-error" data-error-for="topic"></div>
+        </div>
+
+        <div class="field">
+          <label for="questionText">Question Text</label>
+          <textarea id="questionText" rows="6"></textarea>
+          <div class="field-error" data-error-for="question_text"></div>
+        </div>
+
+        <div class="field">
+          <label>Options</label>
+          <div class="option-row"><div class="option-letter">A</div><input id="optionA" type="text"></div>
+          <div class="option-row"><div class="option-letter">B</div><input id="optionB" type="text"></div>
+          <div class="option-row"><div class="option-letter">C</div><input id="optionC" type="text"></div>
+          <div class="option-row"><div class="option-letter">D</div><input id="optionD" type="text"></div>
+          <div class="option-row"><div class="option-letter">E</div><input id="optionE" type="text"></div>
+          <div class="field-error" data-error-for="options"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="correctOption">Correct Answer</label>
+            <select id="correctOption">
+              <option value="a">a</option><option value="b">b</option>
+              <option value="c">c</option><option value="d">d</option>
+              <option value="e">e</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="teachingPoint">Teaching Point</label>
+            <input id="teachingPoint" type="text">
+            <div class="field-error" data-error-for="teaching_point"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="explanation">Explanation</label>
+          <textarea id="explanation" rows="8"></textarea>
+          <div class="field-error" data-error-for="explanation"></div>
+        </div>
+
+        <div style="margin-top:8px">
+          <button id="repasteBtn" class="link-btn">↩ Re-paste</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDIA -->
+    <div class="section">
+      <h3 class="section-title">Media</h3>
+      <div class="media-row">
+        <div class="dropzone" data-slot="stem">
+          <div class="dropzone-label">Stem Image</div>
+          <div class="dropzone-hint">Drag &amp; drop or click</div>
+          <img class="dropzone-preview" alt="">
+          <div class="type-select-wrap">
+            <label for="stem-type">Type</label>
+            <select id="stem-type" class="type-select">
+              <option value="histology">histology</option>
+              <option value="diagram" selected>diagram</option>
+              <option value="ecg">ecg</option>
+              <option value="xray">xray</option>
+              <option value="action_pot">action_pot</option>
+              <option value="pv_loop">pv_loop</option>
+            </select>
+          </div>
+          <div class="filename" data-filename></div>
+          <input type="file" accept="image/*" hidden>
+        </div>
+        <div class="dropzone" data-slot="explanation">
+          <div class="dropzone-label">Explanation Image</div>
+          <div class="dropzone-hint">Drag &amp; drop or click</div>
+          <img class="dropzone-preview" alt="">
+          <div class="type-select-wrap">
+            <label for="exp-type">Type</label>
+            <select id="exp-type" class="type-select">
+              <option value="histology">histology</option>
+              <option value="diagram" selected>diagram</option>
+              <option value="ecg">ecg</option>
+              <option value="xray">xray</option>
+              <option value="action_pot">action_pot</option>
+              <option value="pv_loop">pv_loop</option>
+            </select>
+          </div>
+          <div class="filename" data-filename></div>
+          <input type="file" accept="image/*" hidden>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="section">
+      <h3 class="section-title">Actions</h3>
+      <div class="actions">
+        <button id="btn-create">Create Files</button>
+        <button id="btn-push" class="secondary" disabled>Push to Supabase</button>
+      </div>
+      <div class="new-question-row" id="new-q-row">
+        <button id="btn-new" class="secondary" style="width:100%">+ New Question</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ───────────── RIGHT: DASHBOARD ───────────── -->
+  <section class="dash-col">
+    <div class="dash-header">
+      <div class="dash-title">Recent Questions</div>
+      <button class="refresh-btn" id="btn-refresh">↻ Refresh</button>
+    </div>
+    <div id="dash-content">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </section>
+</main>
+
+<!-- ───────────── LOG PANEL ───────────── -->
+<div class="log-panel" id="log-panel">
+  <div class="log-head" id="log-head">
+    <span><span class="arrow">▶</span> LOG</span>
+    <button class="clear-btn" id="btn-clear-log">Clear</button>
+  </div>
+  <div class="log-body" id="log-body"></div>
+</div>
+
+<script>
+(() => {
+  const state = {
+    config: null,
+    lastScaffoldedPath: null,
+    expandedId: null,
+    media: { stem: null, explanation: null },
+    mediaDescriptions: { stem: '', explanation: '' },
+  };
+
+  const $  = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  // Canonical-name → DOM selector
+  const FIELDS = {
+    external_id:     '#f-id',
+    subject:         '#f-subject',
+    domain:          '#f-domain',
+    difficulty:      '#f-difficulty',
+    reasoning_order: '#f-reasoning',
+    competency:      '#f-competency',
+    topic:           '#topic',
+    question_text:   '#questionText',
+    option_a:        '#optionA',
+    option_b:        '#optionB',
+    option_c:        '#optionC',
+    option_d:        '#optionD',
+    option_e:        '#optionE',
+    correct_option:  '#correctOption',
+    explanation:     '#explanation',
+    teaching_point:  '#teachingPoint',
+  };
+
+  // ── Log panel ──
+  const logPanel = $('#log-panel');
+  const logBody  = $('#log-body');
+  const logHead  = $('#log-head');
+  const logArrow = logHead.querySelector('.arrow');
+
+  function setLogExpanded(expanded) {
+    logPanel.classList.toggle('expanded', expanded);
+    logArrow.textContent = expanded ? '▼' : '▶';
+  }
+  logHead.addEventListener('click', (e) => {
+    if (e.target.id === 'btn-clear-log') return;
+    setLogExpanded(!logPanel.classList.contains('expanded'));
+  });
+  $('#btn-clear-log').addEventListener('click', (e) => {
+    e.stopPropagation();
+    logBody.innerHTML = '';
+  });
+  function appendLog(line, cls = '') {
+    const div = document.createElement('div');
+    div.className = 'log-line ' + cls;
+    div.textContent = line;
+    logBody.appendChild(div);
+    logBody.scrollTop = logBody.scrollHeight;
+    if (!logPanel.classList.contains('expanded')) setLogExpanded(true);
+  }
+  function classifyLine(line) {
+    if (/✓|✦|complete/i.test(line)) return 'ok';
+    if (/✗|failed|error/i.test(line)) return 'err';
+    if (/⏭|skipped|warn/i.test(line)) return 'warn';
+    if (/DEBUG/.test(line)) return 'dim';
+    return '';
+  }
+
+  // ── Question sub-state switching ──
+  function showQuestionPasteState() {
+    $('#questionPasteState').style.display = 'block';
+    $('#questionEditState').style.display  = 'none';
+  }
+  function showQuestionEditState() {
+    $('#questionPasteState').style.display = 'none';
+    $('#questionEditState').style.display  = 'block';
+  }
+  function clearQuestionEditFields() {
+    ['topic','questionText','optionA','optionB','optionC','optionD','optionE','teachingPoint','explanation']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    $('#correctOption').value = 'a';
+  }
+
+  $('#goManualBtn').addEventListener('click', () => {
+    clearQuestionEditFields();
+    showQuestionEditState();
+  });
+  $('#repasteBtn').addEventListener('click', () => {
+    clearQuestionEditFields();
+    $('#questionPasteArea').value = '';
+    showQuestionPasteState();
+  });
+
+  // ── Parse ──
+  $('#parseBtn').addEventListener('click', parseQuestionSection);
+  async function parseQuestionSection() {
+    const text = $('#questionPasteArea').value.trim();
+    if (!text) { appendLog('✗ Paste area is empty', 'err'); return; }
+
+    const btn = $('#parseBtn');
+    btn.textContent = 'Parsing…';
+    btn.disabled = true;
+    btn.classList.add('spinner');
+    appendLog('▶ Parsing question section…');
+
+    try {
+      const res = await fetch('/api/parse-question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Parse failed');
+
+      const p = data.parsed;
+      $('#topic').value          = p.topic          ?? '';
+      $('#questionText').value   = p.question_text  ?? '';
+      $('#optionA').value        = p.option_a       ?? '';
+      $('#optionB').value        = p.option_b       ?? '';
+      $('#optionC').value        = p.option_c       ?? '';
+      $('#optionD').value        = p.option_d       ?? '';
+      $('#optionE').value        = p.option_e       ?? '';
+      $('#correctOption').value  = (p.correct_option || 'a').toLowerCase();
+      $('#teachingPoint').value  = p.teaching_point ?? '';
+      $('#explanation').value    = p.explanation    ?? '';
+      state.mediaDescriptions.stem        = p.stem_media_description        ?? '';
+      state.mediaDescriptions.explanation = p.explanation_media_description ?? '';
+
+      appendLog('✓ Question fields populated — review and edit as needed.', 'ok');
+      showQuestionEditState();
+    } catch (err) {
+      appendLog(`✗ Parse error: ${err.message}`, 'err');
+    } finally {
+      btn.textContent = 'Parse';
+      btn.disabled = false;
+      btn.classList.remove('spinner');
+    }
+  }
+
+  // ── Config + dropdowns ──
+  async function loadConfig() {
+    const res = await fetch('/api/config');
+    state.config = await res.json();
+    const subSel = $('#f-subject');
+    subSel.innerHTML = '';
+    state.config.subjects.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.name; opt.textContent = s.name;
+      subSel.appendChild(opt);
+    });
+    populateDomains();
+  }
+  function populateDomains() {
+    const subject = state.config.subjects.find(s => s.name === $('#f-subject').value);
+    const domSel = $('#f-domain');
+    domSel.innerHTML = '';
+    if (!subject) return;
+    subject.domains.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      domSel.appendChild(opt);
+    });
+  }
+  $('#f-subject').addEventListener('change', () => { populateDomains(); validateId(); });
+  $('#f-domain').addEventListener('change', validateId);
+
+  // ── ID validation ──
+  let validateTimer = null;
+  async function validateId() {
+    const id = $('#f-id').value.trim();
+    const subject = $('#f-subject').value;
+    const domain = $('#f-domain').value;
+    const status = $('#id-status');
+    status.textContent = '';
+    status.className = 'id-status';
+    if (!id) return;
+    try {
+      const url = `/api/validate-id?id=${encodeURIComponent(id)}&subject=${encodeURIComponent(subject)}&domain=${encodeURIComponent(domain)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.valid) { status.classList.add('invalid'); status.textContent = '⚠ ' + data.message; return; }
+      if (data.exists) { status.classList.add('exists');  status.textContent = '✗ ' + data.message; return; }
+      status.classList.add('ok'); status.textContent = '✓ ' + data.message;
+    } catch (err) {
+      status.classList.add('invalid'); status.textContent = '⚠ ' + err.message;
+    }
+  }
+  $('#f-id').addEventListener('blur', validateId);
+  $('#f-id').addEventListener('input', () => {
+    clearTimeout(validateTimer);
+    validateTimer = setTimeout(validateId, 400);
+  });
+
+  // ── Media drop zones ──
+  function setupDropzone(zone) {
+    const slot = zone.dataset.slot;
+    const input = zone.querySelector('input[type="file"]');
+    const preview = zone.querySelector('.dropzone-preview');
+    const filenameEl = zone.querySelector('[data-filename]');
+    const typeSel = zone.querySelector('.type-select');
+    const hint = zone.querySelector('.dropzone-hint');
+
+    const updateFilename = () => {
+      if (!state.media[slot]) { filenameEl.textContent = ''; return; }
+      const ext = (state.media[slot].name.match(/\.[^.]+$/) || ['.png'])[0].toLowerCase();
+      filenameEl.textContent = `→ ${slot}.${typeSel.value}${ext}`;
+    };
+    const acceptFile = (file) => {
+      if (!file) return;
+      state.media[slot] = file;
+      preview.src = URL.createObjectURL(file);
+      preview.classList.add('visible');
+      hint.style.display = 'none';
+      updateFilename();
+    };
+    zone.addEventListener('click', (e) => {
+      if (e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL') return;
+      input.click();
+    });
+    input.addEventListener('change', () => acceptFile(input.files[0]));
+    typeSel.addEventListener('change', updateFilename);
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) acceptFile(file);
+    });
+  }
+  $$('.dropzone').forEach(setupDropzone);
+
+  // ── Read fields + validate ──
+  function getAllFields() {
+    const out = {};
+    for (const [k, sel] of Object.entries(FIELDS)) {
+      const el = $(sel);
+      out[k] = (el?.value || '').trim();
+    }
+    return out;
+  }
+  const REQUIRED_FIELDS = [
+    'subject','domain','topic','question_text',
+    'option_a','option_b','option_c','option_d','option_e',
+    'explanation','teaching_point',
+  ];
+  function clearErrors() {
+    $$('.field-error').forEach(el => el.textContent = '');
+    $$('input.invalid, textarea.invalid').forEach(el => el.classList.remove('invalid'));
+  }
+  function validateForm() {
+    clearErrors();
+    const data = getAllFields();
+    const missing = [];
+    REQUIRED_FIELDS.forEach(k => {
+      if (!data[k]) {
+        missing.push(k);
+        const el = $(FIELDS[k]);
+        if (el) el.classList.add('invalid');
+        const errEl = document.querySelector(`[data-error-for="${k.startsWith('option_') ? 'options' : k}"]`);
+        if (errEl && !errEl.textContent) errEl.textContent = 'Required';
+      }
+    });
+    if (!/^[A-Z]{2}-[A-Z]{2,6}-\d{3}$/.test(data.external_id)) {
+      missing.push('external_id');
+      $(FIELDS.external_id).classList.add('invalid');
+    }
+    return missing;
+  }
+
+  // ── Buttons ──
+  const btnCreate = $('#btn-create');
+  const btnPush   = $('#btn-push');
+  const newRow    = $('#new-q-row');
+
+  function resetButtons() {
+    btnCreate.className = '';
+    btnCreate.textContent = 'Create Files';
+    btnCreate.disabled = false;
+    btnPush.className = 'secondary';
+    btnPush.textContent = 'Push to Supabase';
+    btnPush.disabled = true;
+    newRow.classList.remove('visible');
+  }
+  function resetAll() {
+    Object.values(FIELDS).forEach(sel => {
+      const el = $(sel);
+      if (!el) return;
+      if (el.tagName === 'SELECT') el.selectedIndex = 0;
+      else el.value = '';
+    });
+    populateDomains();
+    state.media = { stem: null, explanation: null };
+    state.mediaDescriptions = { stem: '', explanation: '' };
+    $$('.dropzone').forEach(z => {
+      z.querySelector('.dropzone-preview').classList.remove('visible');
+      z.querySelector('[data-filename]').textContent = '';
+      z.querySelector('.dropzone-hint').style.display = '';
+      z.querySelector('input[type="file"]').value = '';
+    });
+    $('#id-status').textContent = '';
+    clearErrors();
+    state.lastScaffoldedPath = null;
+    resetButtons();
+    $('#questionPasteArea').value = '';
+    showQuestionPasteState();
+  }
+
+  btnCreate.addEventListener('click', async () => {
+    const missing = validateForm();
+    if (missing.length) {
+      appendLog(`✗ Validation failed: ${missing.join(', ')}`, 'err');
+      return;
+    }
+    btnCreate.disabled = true;
+    btnCreate.textContent = 'Creating…';
+    const data = getAllFields();
+    const fd = new FormData();
+    Object.entries(data).forEach(([k, v]) => fd.append(k, v));
+    fd.append('stemType', $('#stem-type').value);
+    fd.append('explanationType', $('#exp-type').value);
+    fd.append('stemMediaDescription', state.mediaDescriptions.stem ?? '');
+    fd.append('explanationMediaDescription', state.mediaDescriptions.explanation ?? '');
+    if (state.media.stem)        fd.append('stemMedia', state.media.stem);
+    if (state.media.explanation) fd.append('explanationMedia', state.media.explanation);
+
+    try {
+      const res = await fetch('/api/scaffold', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!result.success) throw new Error(result.error || 'Scaffold failed');
+      state.lastScaffoldedPath = result.folderPath;
+      btnCreate.className = 'success';
+      btnCreate.textContent = '✓ Files Created';
+      btnPush.disabled = false;
+      btnPush.className = '';
+      appendLog(`✓ Scaffold created: ${result.relativeFolderPath}`, 'ok');
+      result.files.forEach(f => appendLog(`  · ${f}`, 'dim'));
+    } catch (err) {
+      btnCreate.disabled = false;
+      btnCreate.className = 'error';
+      btnCreate.textContent = 'Create Files';
+      appendLog(`✗ ${err.message}`, 'err');
+    }
+  });
+
+  btnPush.addEventListener('click', async () => {
+    if (!state.lastScaffoldedPath) return;
+    btnPush.disabled = true;
+    btnPush.textContent = 'Pushing…';
+    appendLog(`▶ Ingesting ${state.lastScaffoldedPath}`, '');
+    try {
+      const res = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: state.lastScaffoldedPath }),
+      });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let hadError = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          appendLog(line, classifyLine(line));
+          if (/✗|failed|error/i.test(line)) hadError = true;
+        }
+      }
+      if (buffer.trim()) appendLog(buffer, classifyLine(buffer));
+
+      if (hadError) {
+        btnPush.className = 'error';
+        btnPush.textContent = '✗ Failed';
+        btnPush.disabled = false;
+      } else {
+        btnPush.className = 'success';
+        btnPush.textContent = '✓ Ingested';
+        state.lastScaffoldedPath = null;
+        newRow.classList.add('visible');
+        loadQuestions();
+      }
+    } catch (err) {
+      btnPush.className = 'error';
+      btnPush.textContent = '✗ Failed';
+      btnPush.disabled = false;
+      appendLog(`✗ ${err.message}`, 'err');
+    }
+  });
+
+  $('#btn-new').addEventListener('click', resetAll);
+
+  // ── Dashboard ──
+  function renderDashboard(questions) {
+    const root = $('#dash-content');
+    if (!questions.length) {
+      root.innerHTML = `<div class="empty-state">No questions ingested yet.<br>Create your first question using the form.</div>`;
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'qtable';
+    table.innerHTML = `<thead><tr>
+      <th>ID</th><th>Domain</th><th>Difficulty</th><th>Media</th><th>Topic</th>
+    </tr></thead>`;
+    const tbody = document.createElement('tbody');
+    questions.forEach(q => {
+      const tr = document.createElement('tr');
+      tr.className = 'qrow';
+      tr.dataset.id = q.external_id;
+      const diffCls = (q.difficulty || '').toLowerCase();
+      const topic = (q.topic || '').length > 40 ? q.topic.slice(0, 40) + '…' : (q.topic || '');
+      tr.innerHTML = `
+        <td class="qid">${q.external_id}</td>
+        <td class="qdomain">${q.domain || ''}</td>
+        <td><span class="badge ${diffCls}">${q.difficulty || ''}</span></td>
+        <td class="qmedia">${q.has_media ? '🖼' : ''}</td>
+        <td class="qtopic" title="${escapeHtml(q.topic || '')}">${escapeHtml(topic)}</td>
+      `;
+      tr.addEventListener('click', () => toggleRow(q, tr));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    root.innerHTML = '';
+    root.appendChild(table);
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function toggleRow(q, tr) {
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains('qdetail-row')) {
+      next.remove();
+      tr.classList.remove('expanded');
+      state.expandedId = null;
+      return;
+    }
+    document.querySelectorAll('.qdetail-row').forEach(n => n.remove());
+    document.querySelectorAll('tr.qrow.expanded').forEach(n => n.classList.remove('expanded'));
+    const detail = document.createElement('tr');
+    detail.className = 'qdetail-row';
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.className = 'qdetail';
+    const opts = ['a','b','c','d','e'].map(L => {
+      const text = q['option_' + L] || '';
+      const isCorrect = q.correct_option === L;
+      return `<div class="opt ${isCorrect ? 'correct' : ''}"><span class="letter">${L.toUpperCase()}</span>${escapeHtml(text)}</div>`;
+    }).join('');
+    td.innerHTML = `
+      <h4>Question</h4>
+      <div class="qtext">${escapeHtml(q.question_text || '')}</div>
+      <h4>Options (correct = ${q.correct_option})</h4>
+      ${opts}
+      <h4>Folder</h4>
+      <div class="folder">${escapeHtml(q.folder || '')}</div>
+    `;
+    detail.appendChild(td);
+    tr.parentNode.insertBefore(detail, tr.nextSibling);
+    tr.classList.add('expanded');
+    state.expandedId = q.external_id;
+  }
+  async function loadQuestions() {
+    try {
+      const res = await fetch('/api/questions');
+      const data = await res.json();
+      renderDashboard(data);
+    } catch (err) {
+      $('#dash-content').innerHTML = `<div class="empty-state">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+  $('#btn-refresh').addEventListener('click', loadQuestions);
+
+  // ── Init ──
+  loadConfig().then(loadQuestions).catch(err => {
+    appendLog(`✗ Init failed: ${err.message}`, 'err');
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+node_modules/
+.env
+scripts/src/failed_ingestions.json
+.env.local
+dist/
+cardiovascular/
