@@ -25,6 +25,7 @@ function required(name: string): string {
 export const env = {
   SUPABASE_URL: required('SUPABASE_URL'),
   SUPABASE_SERVICE_ROLE_KEY: required('SUPABASE_SERVICE_ROLE_KEY'),
+  STUDIO_PASSWORD: required('STUDIO_PASSWORD'),
 };
 
 export const REPO_ROOT = repoRoot;

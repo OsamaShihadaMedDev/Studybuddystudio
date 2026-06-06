@@ -7,6 +7,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // ── Password gate ──
+  (function() {
+    let pwd = sessionStorage.getItem('studio_pwd');
+    if (!pwd) {
+      pwd = prompt('Studio password:');
+      if (!pwd) {
+        document.body.innerHTML = '<p style="color:#e5534b;padding:2rem">Access denied.</p>';
+        return;
+      }
+      sessionStorage.setItem('studio_pwd', pwd);
+    }
+    const _fetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      const headers = new Headers(init.headers ?? {});
+      headers.set('Authorization', 'Basic ' + btoa(':' + pwd));
+      return _fetch(input, { ...init, headers });
+    };
+  })();
+</script>
 <style>
   :root {
     --bg:        #0d1117;
@@ -332,6 +352,8 @@
   .badge.easy   { color: var(--green); border-color: var(--green); background: var(--green-dim); }
   .badge.medium { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
   .badge.hard   { color: var(--red);   border-color: var(--red);   background: var(--red-dim); }
+  .badge.ok     { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+  .badge.warn   { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
 
   .qdetail {
     padding: 14px 16px 18px;
@@ -514,7 +536,7 @@
   }
   .media-file-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1.4fr) auto;
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
@@ -793,7 +815,7 @@
 (() => {
   const state = {
     config: null,
-    lastScaffoldedPath: null,
+    lastScaffoldedId: null,
     expandedId: null,
     mediaFiles: { stem: [], explanation: [] },
     // mediaFiles[context] = array of { file: File, get typeToken(): string, row: HTMLElement }
@@ -1138,6 +1160,12 @@
 
     updateRowFilename();
 
+    const descInput = document.createElement('input');
+    descInput.type = 'text';
+    descInput.className = 'media-file-desc';
+    descInput.placeholder = 'Describe this image…';
+    descInput.style.cssText = 'flex:1;min-width:0;background:var(--bg-input);border:1px solid var(--border);color:var(--text);padding:5px 8px;font-size:12px;font-family:var(--sans);border-radius:0;';
+
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'media-file-remove';
@@ -1150,10 +1178,16 @@
 
     row.appendChild(nameEl);
     row.appendChild(typeWrapper);
+    row.appendChild(descInput);
     row.appendChild(removeBtn);
     listEl.appendChild(row);
 
-    const entry = { file, get typeToken() { return selectedType; }, row };
+    const entry = {
+      file,
+      get typeToken()   { return selectedType; },
+      get description() { return descInput.value.trim(); },
+      row,
+    };
     state.mediaFiles[context].push(entry);
   }
 
@@ -1246,7 +1280,7 @@
     document.getElementById('explanationFileList').innerHTML = '';
     $('#id-status').textContent = '';
     clearErrors();
-    state.lastScaffoldedPath = null;
+    state.lastScaffoldedId = null;
     resetButtons();
     $('#questionPasteArea').value = '';
     showQuestionPasteState();
@@ -1268,25 +1302,27 @@
     state.mediaFiles.stem.forEach((entry, i) => {
       fd.append('stemMedia', entry.file);
       fd.append(`stemType_${i}`, entry.typeToken);
-      fd.append(`stemMediaDescription_${i}`, '');
+      fd.append(`stemMediaDescription_${i}`, entry.description);
     });
     state.mediaFiles.explanation.forEach((entry, i) => {
       fd.append('explanationMedia', entry.file);
       fd.append(`explanationType_${i}`, entry.typeToken);
-      fd.append(`explanationMediaDescription_${i}`, '');
+      fd.append(`explanationMediaDescription_${i}`, entry.description);
     });
 
     try {
       const res = await fetch('/api/scaffold', { method: 'POST', body: fd });
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Scaffold failed');
-      state.lastScaffoldedPath = result.folderPath;
+      state.lastScaffoldedId = result.external_id;
       btnCreate.className = 'success';
-      btnCreate.textContent = '✓ Files Created';
+      btnCreate.textContent = '✓ Draft Saved';
       btnPush.disabled = false;
       btnPush.className = '';
-      appendLog(`✓ Scaffold created: ${result.relativeFolderPath}`, 'ok');
-      result.files.forEach(f => appendLog(`  · ${f}`, 'dim'));
+      appendLog(`✓ Draft saved: ${result.external_id}`, 'ok');
+      (result.stagedMedia ?? []).forEach(m => {
+        appendLog(`  · ${m.storage_path.split('/').pop()}`, 'dim');
+      });
     } catch (err) {
       btnCreate.disabled = false;
       btnCreate.className = 'error';
@@ -1296,15 +1332,15 @@
   });
 
   btnPush.addEventListener('click', async () => {
-    if (!state.lastScaffoldedPath) return;
+    if (!state.lastScaffoldedId) return;
     btnPush.disabled = true;
     btnPush.textContent = 'Pushing…';
-    appendLog(`▶ Ingesting ${state.lastScaffoldedPath}`, '');
+    appendLog(`▶ Pushing ${state.lastScaffoldedId} to Supabase…`, '');
     try {
       const res = await fetch('/api/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderPath: state.lastScaffoldedPath }),
+        body: JSON.stringify({ external_id: state.lastScaffoldedId }),
       });
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -1332,7 +1368,7 @@
       } else {
         btnPush.className = 'success';
         btnPush.textContent = '✓ Ingested';
-        state.lastScaffoldedPath = null;
+        state.lastScaffoldedId = null;
         newRow.classList.add('visible');
         loadQuestions();
       }
@@ -1356,7 +1392,7 @@
     const table = document.createElement('table');
     table.className = 'qtable';
     table.innerHTML = `<thead><tr>
-      <th>ID</th><th>Domain</th><th>Difficulty</th><th>Media</th><th>Topic</th>
+      <th>ID</th><th>Domain</th><th>Difficulty</th><th>Media</th><th>Status</th><th>Topic</th>
     </tr></thead>`;
     const tbody = document.createElement('tbody');
     questions.forEach(q => {
@@ -1365,11 +1401,14 @@
       tr.dataset.id = q.external_id;
       const diffCls = (q.difficulty || '').toLowerCase();
       const topic = (q.topic || '').length > 40 ? q.topic.slice(0, 40) + '…' : (q.topic || '');
+      const statusCls = q.status === 'pushed' ? 'ok' : 'warn';
+      const statusLabel = q.status === 'pushed' ? 'pushed' : 'draft';
       tr.innerHTML = `
         <td class="qid">${q.external_id}</td>
         <td class="qdomain">${q.domain || ''}</td>
         <td><span class="badge ${diffCls}">${q.difficulty || ''}</span></td>
         <td class="qmedia">${q.has_media ? '🖼' : ''}</td>
+        <td><span class="badge ${statusCls}">${statusLabel}</span></td>
         <td class="qtopic" title="${escapeHtml(q.topic || '')}">${escapeHtml(topic)}</td>
       `;
       tr.addEventListener('click', () => toggleRow(q, tr));
@@ -1395,7 +1434,7 @@
     const detail = document.createElement('tr');
     detail.className = 'qdetail-row';
     const td = document.createElement('td');
-    td.colSpan = 5;
+    td.colSpan = 6;
     td.className = 'qdetail';
     const opts = ['a','b','c','d','e'].map(L => {
       const text = q['option_' + L] || '';
@@ -1407,8 +1446,8 @@
       <div class="qtext">${escapeHtml(q.question_text || '')}</div>
       <h4>Options (correct = ${q.correct_option})</h4>
       ${opts}
-      <h4>Folder</h4>
-      <div class="folder">${escapeHtml(q.folder || '')}</div>
+      <h4>Status</h4>
+      <div class="folder">${escapeHtml(q.status || '')}</div>
     `;
     detail.appendChild(td);
     tr.parentNode.insertBefore(detail, tr.nextSibling);

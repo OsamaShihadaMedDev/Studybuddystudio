@@ -1,20 +1,14 @@
 import express from 'express';
 import multer from 'multer';
 import * as path from 'node:path';
-import * as fs from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { REPO_ROOT } from './lib/env.js';
-import {
-  scaffoldQuestion,
-  validateScaffoldId,
-  getSubjectsConfig,
-  ScaffoldInput,
-  MediaInput,
-} from './scaffoldQuestion.js';
-import { ingestFolder } from './ingestQuestions.js';
+import { env } from './lib/env.js';
+import { supabase } from './lib/supabase.js';
+import { validTypeTokens, parseMediaFilename } from './lib/mediaTypeMap.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT ?? 3000);
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? '';
 if (!OPENROUTER_API_KEY) {
@@ -62,6 +56,27 @@ const upload = multer({
 });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+function getSubjectsConfig() {
+  return JSON.parse(
+    readFileSync(path.resolve(REPO_ROOT, 'subjects.config.json'), 'utf-8')
+  );
+}
+
+// ── Password gate ──
+app.use((req, res, next) => {
+  if (req.path === '/' && req.method === 'GET') return next();
+
+  const authHeader = (req.headers['authorization'] as string | undefined) ?? '';
+  if (authHeader.startsWith('Basic ')) {
+    const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf-8');
+    const password = decoded.split(':').slice(1).join(':');
+    if (password === env.STUDIO_PASSWORD) return next();
+  }
+
+  res.status(401).json({ error: 'Unauthorized' });
+});
 
 app.get('/', (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'studio.html'));
@@ -76,29 +91,76 @@ app.get('/api/config', (_req, res) => {
   }
 });
 
-app.get('/api/validate-id', (req, res) => {
-  const { id, subject, domain } = req.query as Record<string, string>;
+app.get('/api/next-id', async (req, res) => {
+  const { subject, domain } = req.query as Record<string, string>;
+  if (!subject || !domain) {
+    return res.status(400).json({ error: 'subject and domain are required' });
+  }
 
+  try {
+    const config = getSubjectsConfig();
+    const subjectEntry = config.subjects.find((s: any) => s.name === subject);
+    if (!subjectEntry) {
+      return res.status(400).json({ error: `Subject "${subject}" not found` });
+    }
+
+    const domainEntry = subjectEntry.domains.find((d: any) => d.name === domain);
+    if (!domainEntry) {
+      return res.status(400).json({ error: `Domain "${domain}" not found for subject "${subject}"` });
+    }
+
+    const idPrefix = `${subjectEntry.prefix}-${domainEntry.abbrev}-`;
+    const pattern  = `${idPrefix}%`;
+
+    const [{ data: liveRows }, { data: draftRows }] = await Promise.all([
+      supabase.from('questions').select('external_id').like('external_id', pattern),
+      supabase.from('questions_draft').select('external_id').like('external_id', pattern),
+    ]);
+
+    const allIds = [
+      ...(liveRows  ?? []).map((r: any) => r.external_id as string),
+      ...(draftRows ?? []).map((r: any) => r.external_id as string),
+    ];
+
+    let maxNum = 0;
+    for (const id of allIds) {
+      const numStr = id.slice(idPrefix.length);
+      const num = parseInt(numStr, 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+
+    const nextId = `${idPrefix}${String(maxNum + 1).padStart(3, '0')}`;
+    res.json({ nextId });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.get('/api/validate-id', async (req, res) => {
+  const { id, subject, domain } = req.query as Record<string, string>;
   if (!id || !subject || !domain) {
     return res.status(400).json({ error: 'id, subject, and domain are required' });
   }
 
   if (!/^[A-Z]{2}-[A-Z]{2,6}-\d{3}$/.test(id)) {
-    return res.json({
-      valid: false,
-      exists: false,
-      message: 'Invalid format. Expected: CV-HISTO-012',
-    });
+    return res.json({ valid: false, exists: false, message: 'Invalid format. Expected: CV-HISTO-012' });
   }
 
-  const { exists, folderPath } = validateScaffoldId(id, subject, domain);
-  res.json({
-    valid: true,
-    exists,
-    message: exists
-      ? `Folder already exists: ${path.relative(REPO_ROOT, folderPath)}`
-      : `Available: ${path.relative(REPO_ROOT, folderPath)}`,
-  });
+  try {
+    const [{ data: live }, { data: draft }] = await Promise.all([
+      supabase.from('questions').select('id').eq('external_id', id).maybeSingle(),
+      supabase.from('questions_draft').select('id').eq('external_id', id).maybeSingle(),
+    ]);
+
+    const exists = !!(live || draft);
+    res.json({
+      valid: true,
+      exists,
+      message: exists ? `ID already exists: ${id}` : `Available: ${id}`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 app.post(
@@ -109,95 +171,281 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const body = req.body as Record<string, string>;
+      const body  = req.body as Record<string, string>;
       const files = req.files as Record<string, Express.Multer.File[]>;
 
+      interface MediaInput {
+        buffer:      Buffer;
+        ext:         string;
+        context:     'stem' | 'explanation';
+        typeToken:   string;
+        description: string;
+      }
       const mediaInputs: MediaInput[] = [];
 
       if (files?.stemMedia) {
-        for (const f of files.stemMedia) {
-          const i = mediaInputs.filter(m => m.context === 'stem').length;
-          const typeKey = `stemType_${i}`;
-          const descKey = `stemMediaDescription_${i}`;
+        files.stemMedia.forEach((f, i) => {
           mediaInputs.push({
-            buffer: f.buffer,
-            originalExtension: path.extname(f.originalname).toLowerCase() || '.png',
-            context: 'stem',
-            typeToken: body[typeKey] ?? body.stemType ?? 'diagram',
-            description: ((body[descKey] ?? body.stemMediaDescription) || '').trim(),
+            buffer:      f.buffer,
+            ext:         path.extname(f.originalname).toLowerCase() || '.png',
+            context:     'stem',
+            typeToken:   body[`stemType_${i}`] ?? 'diagram',
+            description: (body[`stemMediaDescription_${i}`] ?? '').trim(),
           });
-        }
+        });
       }
-
       if (files?.explanationMedia) {
-        for (const f of files.explanationMedia) {
-          const i = mediaInputs.filter(m => m.context === 'explanation').length;
-          const typeKey = `explanationType_${i}`;
-          const descKey = `explanationMediaDescription_${i}`;
+        files.explanationMedia.forEach((f, i) => {
           mediaInputs.push({
-            buffer: f.buffer,
-            originalExtension: path.extname(f.originalname).toLowerCase() || '.png',
-            context: 'explanation',
-            typeToken: body[typeKey] ?? body.explanationType ?? 'diagram',
-            description: ((body[descKey] ?? body.explanationMediaDescription) || '').trim(),
+            buffer:      f.buffer,
+            ext:         path.extname(f.originalname).toLowerCase() || '.png',
+            context:     'explanation',
+            typeToken:   body[`explanationType_${i}`] ?? 'diagram',
+            description: (body[`explanationMediaDescription_${i}`] ?? '').trim(),
           });
-        }
+        });
       }
 
-      const input: ScaffoldInput = {
-        external_id:     body.external_id,
-        subject:         body.subject,
-        domain:          body.domain,
-        topic:           body.topic,
-        difficulty:      body.difficulty as ScaffoldInput['difficulty'],
-        reasoning_order: body.reasoning_order as ScaffoldInput['reasoning_order'],
-        competency:      body.competency,
-        question_text:   body.question_text,
-        option_a:        body.option_a,
-        option_b:        body.option_b,
-        option_c:        body.option_c,
-        option_d:        body.option_d,
-        option_e:        body.option_e,
-        correct_option:  body.correct_option as ScaffoldInput['correct_option'],
-        explanation:     body.explanation,
-        teaching_point:  body.teaching_point,
-        media:           mediaInputs,
-      };
+      const errors: string[] = [];
+      const external_id = (body.external_id ?? '').trim();
 
-      const result = await scaffoldQuestion(input);
+      if (!/^[A-Z]{2}-[A-Z]{2,6}-\d{3}$/.test(external_id)) {
+        errors.push(`Invalid external_id format: "${external_id}"`);
+      }
 
-      res.json({
-        success: true,
-        folderPath: result.folderPath,
-        relativeFolderPath: result.relativeFolderPath,
-        files: result.files,
+      const requiredFields = [
+        'subject','domain','topic','difficulty','reasoning_order','competency',
+        'question_text','option_a','option_b','option_c','option_d','option_e',
+        'correct_option','explanation','teaching_point',
+      ];
+      for (const f of requiredFields) {
+        if (!body[f] || body[f].trim() === '') errors.push(`Missing required field: "${f}"`);
+      }
+
+      const validTokens = validTypeTokens();
+      mediaInputs.forEach((m, i) => {
+        if (!validTokens.includes(m.typeToken)) {
+          errors.push(`media[${i}]: invalid typeToken "${m.typeToken}"`);
+        }
       });
+
+      if (errors.length > 0) {
+        return res.status(400).json({ success: false, error: errors.join('; ') });
+      }
+
+      const [{ data: existingLive }, { data: existingDraft }] = await Promise.all([
+        supabase.from('questions').select('id').eq('external_id', external_id).maybeSingle(),
+        supabase.from('questions_draft').select('id').eq('external_id', external_id).maybeSingle(),
+      ]);
+      if (existingLive || existingDraft) {
+        return res.status(400).json({ success: false, error: `external_id "${external_id}" already exists` });
+      }
+
+      const stagedMedia: object[] = [];
+      for (const m of mediaInputs) {
+        const filename    = `${m.context}.${m.typeToken}${m.ext}`;
+        const storagePath = `${external_id}/${filename}`;
+
+        const contentType = m.ext === '.png' ? 'image/png'
+                          : m.ext === '.svg' ? 'image/svg+xml'
+                          : 'image/jpeg';
+
+        const { error: uploadError } = await supabase.storage
+          .from('qbank-staging')
+          .upload(storagePath, m.buffer, { contentType, upsert: false });
+
+        if (uploadError) {
+          throw new Error(`Storage upload failed for "${filename}": ${uploadError.message}`);
+        }
+
+        stagedMedia.push({
+          storage_path: storagePath,
+          type_token:   m.typeToken,
+          context:      m.context,
+          description:  m.description || `${m.typeToken} image`,
+          original_ext: m.ext,
+        });
+      }
+
+      const { error: insertError } = await supabase
+        .from('questions_draft')
+        .insert({
+          external_id,
+          subject:         body.subject,
+          domain:          body.domain,
+          topic:           body.topic,
+          difficulty:      body.difficulty,
+          reasoning_order: body.reasoning_order,
+          competency:      body.competency,
+          question_text:   body.question_text,
+          option_a:        body.option_a,
+          option_b:        body.option_b,
+          option_c:        body.option_c,
+          option_d:        body.option_d,
+          option_e:        body.option_e,
+          correct_option:  body.correct_option,
+          explanation:     body.explanation,
+          teaching_point:  body.teaching_point,
+          staged_media:    stagedMedia,
+          status:          'draft',
+        });
+
+      if (insertError) {
+        throw new Error(`Draft insert failed: ${insertError.message}`);
+      }
+
+      res.json({ success: true, external_id, stagedMedia });
     } catch (err) {
-      res.status(400).json({
-        success: false,
-        error: (err as Error).message,
-      });
+      res.status(400).json({ success: false, error: (err as Error).message });
     }
   }
 );
 
 app.post('/api/ingest', async (req, res) => {
-  const { folderPath } = req.body as { folderPath?: string };
+  const { external_id } = req.body as { external_id?: string };
 
-  if (!folderPath || !fs.existsSync(folderPath)) {
-    return res.status(400).json({ error: 'Valid folderPath is required' });
+  if (!external_id) {
+    return res.status(400).json({ error: 'external_id is required' });
   }
 
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('X-Accel-Buffering', 'no');
 
-  const sendLine = (msg: string) => {
-    res.write(msg + '\n');
-  };
+  const sendLine = (msg: string) => res.write(msg + '\n');
 
   try {
-    await ingestFolder(folderPath, false, sendLine);
+    const { data: draft, error: draftError } = await supabase
+      .from('questions_draft')
+      .select('*')
+      .eq('external_id', external_id)
+      .single();
+
+    if (draftError || !draft) throw new Error(`Draft not found for "${external_id}"`);
+    if (draft.status === 'pushed') throw new Error(`"${external_id}" has already been pushed`);
+
+    const { data: existing } = await supabase
+      .from('questions')
+      .select('id')
+      .eq('external_id', external_id)
+      .maybeSingle();
+
+    if (existing) throw new Error(`"${external_id}" already exists in questions table`);
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('questions')
+      .insert({
+        external_id:     draft.external_id,
+        subject:         draft.subject,
+        domain:          draft.domain,
+        topic:           draft.topic,
+        difficulty:      draft.difficulty,
+        reasoning_order: draft.reasoning_order,
+        competency:      draft.competency,
+        question_text:   draft.question_text,
+        option_a:        draft.option_a,
+        option_b:        draft.option_b,
+        option_c:        draft.option_c,
+        option_d:        draft.option_d,
+        option_e:        draft.option_e,
+        correct_option:  draft.correct_option,
+        explanation:     draft.explanation,
+        teaching_point:  draft.teaching_point,
+        is_active:       false,
+      })
+      .select('id')
+      .single();
+
+    if (insertError || !inserted) throw new Error(`Question insert failed: ${insertError?.message}`);
+    const questionId = inserted.id;
+    sendLine(`✦ Inserted question (${external_id})`);
+
+    const stagedMedia: Array<{
+      storage_path: string;
+      type_token:   string;
+      context:      string;
+      description:  string;
+      original_ext: string;
+    }> = draft.staged_media ?? [];
+
+    for (let i = 0; i < stagedMedia.length; i++) {
+      const m = stagedMedia[i];
+      const filename = m.storage_path.split('/').pop()!;
+
+      sendLine(`▸ Processing ${filename}…`);
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('qbank-staging')
+        .download(m.storage_path);
+
+      if (downloadError || !fileData) {
+        throw new Error(`Failed to download "${m.storage_path}": ${downloadError?.message}`);
+      }
+
+      const prodPath = `${external_id}/${filename}`;
+      const buffer   = Buffer.from(await fileData.arrayBuffer());
+      const ext      = m.original_ext || '.png';
+      const contentType = ext === '.png' ? 'image/png'
+                        : ext === '.svg' ? 'image/svg+xml'
+                        : 'image/jpeg';
+
+      const { error: uploadError } = await supabase.storage
+        .from('qbank-media')
+        .upload(prodPath, buffer, { contentType, upsert: true });
+
+      if (uploadError) {
+        throw new Error(`Upload to qbank-media failed for "${filename}": ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('qbank-media')
+        .getPublicUrl(prodPath);
+
+      const publicUrl = urlData?.publicUrl;
+      if (!publicUrl) throw new Error(`Could not get public URL for "${prodPath}"`);
+
+      const { displayContext, mediaType } = parseMediaFilename(filename);
+
+      const { data: mediaRow, error: mediaError } = await supabase
+        .from('media')
+        .insert({
+          file_url:    publicUrl,
+          media_type:  mediaType,
+          tags:        [],
+          description: m.description || `${m.type_token} image`,
+          source_url:  'studybuddy-internal',
+          license:     'proprietary',
+          attribution: 'StudyBuddy',
+        })
+        .select('id')
+        .single();
+
+      if (mediaError || !mediaRow) {
+        throw new Error(`Media insert failed for "${filename}": ${mediaError?.message}`);
+      }
+
+      const { error: linkError } = await supabase
+        .from('question_media')
+        .insert({
+          question_id:     questionId,
+          media_id:        mediaRow.id,
+          display_context: displayContext,
+          display_order:   i + 1,
+          caption:         null,
+        });
+
+      if (linkError) {
+        throw new Error(`question_media link failed for "${filename}": ${linkError.message}`);
+      }
+
+      sendLine(`✓ Media linked: ${filename} → ${displayContext} (${mediaType})`);
+    }
+
+    await supabase
+      .from('questions_draft')
+      .update({ status: 'pushed' })
+      .eq('external_id', external_id);
+
     sendLine('✓ Ingestion complete.');
     res.end();
   } catch (err) {
@@ -206,57 +454,23 @@ app.post('/api/ingest', async (req, res) => {
   }
 });
 
-app.get('/api/questions', (_req, res) => {
+app.get('/api/questions', async (_req, res) => {
   try {
-    const config = getSubjectsConfig();
-    const questions: object[] = [];
+    const { data, error } = await supabase
+      .from('questions_draft')
+      .select(
+        'external_id, subject, domain, topic, difficulty, reasoning_order, ' +
+        'question_text, correct_option, option_a, option_b, option_c, option_d, option_e, ' +
+        'staged_media, status, created_at'
+      )
+      .order('created_at', { ascending: false });
 
-    const findJsonFiles = (dir: string): string[] => {
-      const results: string[] = [];
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          results.push(...findJsonFiles(fullPath));
-        } else if (entry.name === 'question.json') {
-          results.push(fullPath);
-        }
-      }
-      return results;
-    };
+    if (error) throw new Error(error.message);
 
-    for (const subject of config.subjects) {
-      const subjectPath = path.resolve(REPO_ROOT, subject.folder);
-      if (!fs.existsSync(subjectPath)) continue;
-
-      for (const jsonPath of findJsonFiles(subjectPath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-          questions.push({
-            external_id:     data.external_id,
-            subject:         data.subject,
-            domain:          data.domain,
-            topic:           data.topic,
-            difficulty:      data.difficulty,
-            reasoning_order: data.reasoning_order,
-            question_text:   data.question_text,
-            correct_option:  data.correct_option,
-            option_a:        data.option_a,
-            option_b:        data.option_b,
-            option_c:        data.option_c,
-            option_d:        data.option_d,
-            option_e:        data.option_e,
-            has_media:       Array.isArray(data.media) && data.media.length > 0,
-            folder:          path.relative(REPO_ROOT, path.dirname(jsonPath)),
-          });
-        } catch {
-          // skip malformed JSON
-        }
-      }
-    }
-
-    questions.sort((a: any, b: any) =>
-      b.external_id.localeCompare(a.external_id)
-    );
+    const questions = (data ?? []).map((q: any) => ({
+      ...q,
+      has_media: Array.isArray(q.staged_media) && q.staged_media.length > 0,
+    }));
 
     res.json(questions);
   } catch (err) {
@@ -329,58 +543,6 @@ app.post('/api/parse-question', async (req, res) => {
     }
 
     res.json({ success: true, parsed });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-app.get('/api/next-id', (req, res) => {
-  const { subject, domain } = req.query as Record<string, string>;
-
-  if (!subject || !domain) {
-    return res.status(400).json({ error: 'subject and domain are required' });
-  }
-
-  try {
-    const config = getSubjectsConfig();
-    const subjectEntry = config.subjects.find(s => s.name === subject);
-
-    if (!subjectEntry) {
-      return res.status(400).json({ error: `Subject "${subject}" not found` });
-    }
-
-    const domainEntry = subjectEntry.domains.find(d => d.name === domain);
-    if (!domainEntry) {
-      return res.status(400).json({ error: `Domain "${domain}" not found for subject "${subject}"` });
-    }
-
-    const prefix = subjectEntry.prefix;
-    const abbrev = domainEntry.abbrev;
-    const idPrefix = `${prefix}-${abbrev}-`;
-
-    const subjectFolderPath = path.resolve(REPO_ROOT, subjectEntry.folder);
-    let maxNum = 0;
-
-    if (fs.existsSync(subjectFolderPath)) {
-      const findMatchingFolders = (dir: string): void => {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-          if (!entry.isDirectory()) continue;
-          if (entry.name.startsWith(idPrefix)) {
-            const numStr = entry.name.slice(idPrefix.length);
-            const num = parseInt(numStr, 10);
-            if (!isNaN(num) && num > maxNum) maxNum = num;
-          } else {
-            findMatchingFolders(path.join(dir, entry.name));
-          }
-        }
-      };
-      findMatchingFolders(subjectFolderPath);
-    }
-
-    const nextNum = String(maxNum + 1).padStart(3, '0');
-    const nextId = `${idPrefix}${nextNum}`;
-
-    res.json({ nextId });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
