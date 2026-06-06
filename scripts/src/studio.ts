@@ -104,8 +104,8 @@ app.get('/api/validate-id', (req, res) => {
 app.post(
   '/api/scaffold',
   upload.fields([
-    { name: 'stemMedia', maxCount: 1 },
-    { name: 'explanationMedia', maxCount: 1 },
+    { name: 'stemMedia', maxCount: 5 },
+    { name: 'explanationMedia', maxCount: 5 },
   ]),
   async (req, res) => {
     try {
@@ -114,26 +114,34 @@ app.post(
 
       const mediaInputs: MediaInput[] = [];
 
-      if (files?.stemMedia?.[0]) {
-        const f = files.stemMedia[0];
-        mediaInputs.push({
-          buffer: f.buffer,
-          originalExtension: path.extname(f.originalname).toLowerCase() || '.png',
-          context: 'stem',
-          typeToken: body.stemType ?? 'diagram',
-          description: (body.stemMediaDescription ?? '').trim(),
-        });
+      if (files?.stemMedia) {
+        for (const f of files.stemMedia) {
+          const i = mediaInputs.filter(m => m.context === 'stem').length;
+          const typeKey = `stemType_${i}`;
+          const descKey = `stemMediaDescription_${i}`;
+          mediaInputs.push({
+            buffer: f.buffer,
+            originalExtension: path.extname(f.originalname).toLowerCase() || '.png',
+            context: 'stem',
+            typeToken: body[typeKey] ?? body.stemType ?? 'diagram',
+            description: ((body[descKey] ?? body.stemMediaDescription) || '').trim(),
+          });
+        }
       }
 
-      if (files?.explanationMedia?.[0]) {
-        const f = files.explanationMedia[0];
-        mediaInputs.push({
-          buffer: f.buffer,
-          originalExtension: path.extname(f.originalname).toLowerCase() || '.png',
-          context: 'explanation',
-          typeToken: body.explanationType ?? 'diagram',
-          description: (body.explanationMediaDescription ?? '').trim(),
-        });
+      if (files?.explanationMedia) {
+        for (const f of files.explanationMedia) {
+          const i = mediaInputs.filter(m => m.context === 'explanation').length;
+          const typeKey = `explanationType_${i}`;
+          const descKey = `explanationMediaDescription_${i}`;
+          mediaInputs.push({
+            buffer: f.buffer,
+            originalExtension: path.extname(f.originalname).toLowerCase() || '.png',
+            context: 'explanation',
+            typeToken: body[typeKey] ?? body.explanationType ?? 'diagram',
+            description: ((body[descKey] ?? body.explanationMediaDescription) || '').trim(),
+          });
+        }
       }
 
       const input: ScaffoldInput = {
@@ -321,6 +329,58 @@ app.post('/api/parse-question', async (req, res) => {
     }
 
     res.json({ success: true, parsed });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.get('/api/next-id', (req, res) => {
+  const { subject, domain } = req.query as Record<string, string>;
+
+  if (!subject || !domain) {
+    return res.status(400).json({ error: 'subject and domain are required' });
+  }
+
+  try {
+    const config = getSubjectsConfig();
+    const subjectEntry = config.subjects.find(s => s.name === subject);
+
+    if (!subjectEntry) {
+      return res.status(400).json({ error: `Subject "${subject}" not found` });
+    }
+
+    const domainEntry = subjectEntry.domains.find(d => d.name === domain);
+    if (!domainEntry) {
+      return res.status(400).json({ error: `Domain "${domain}" not found for subject "${subject}"` });
+    }
+
+    const prefix = subjectEntry.prefix;
+    const abbrev = domainEntry.abbrev;
+    const idPrefix = `${prefix}-${abbrev}-`;
+
+    const subjectFolderPath = path.resolve(REPO_ROOT, subjectEntry.folder);
+    let maxNum = 0;
+
+    if (fs.existsSync(subjectFolderPath)) {
+      const findMatchingFolders = (dir: string): void => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (!entry.isDirectory()) continue;
+          if (entry.name.startsWith(idPrefix)) {
+            const numStr = entry.name.slice(idPrefix.length);
+            const num = parseInt(numStr, 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          } else {
+            findMatchingFolders(path.join(dir, entry.name));
+          }
+        }
+      };
+      findMatchingFolders(subjectFolderPath);
+    }
+
+    const nextNum = String(maxNum + 1).padStart(3, '0');
+    const nextId = `${idPrefix}${nextNum}`;
+
+    res.json({ nextId });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

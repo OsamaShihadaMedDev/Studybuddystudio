@@ -41,7 +41,7 @@ interface SubjectConfig {
   name: string;
   prefix: string;
   folder: string;
-  domains: string[];
+  domains: Array<{ name: string; abbrev: string }>;
 }
 
 interface SubjectsConfig {
@@ -118,15 +118,14 @@ export async function scaffoldQuestion(input: ScaffoldInput): Promise<ScaffoldRe
   const subjectEntry = config.subjects.find(s => s.name === input.subject);
   if (!subjectEntry) {
     errors.push(`Subject "${input.subject}" is not defined in subjects.config.json`);
-  } else if (!subjectEntry.domains.includes(input.domain)) {
+  } else if (!subjectEntry.domains.some(d => d.name === input.domain)) {
     errors.push(
       `Domain "${input.domain}" is not valid for subject "${input.subject}". ` +
-      `Valid domains: ${subjectEntry.domains.join(', ')}`
+      `Valid domains: ${subjectEntry.domains.map(d => d.name).join(', ')}`
     );
   }
 
   const validTokens = validTypeTokens();
-  const seenContexts = new Set<string>();
   input.media.forEach((m, i) => {
     if (!validTokens.includes(m.typeToken)) {
       errors.push(`media[${i}]: invalid typeToken "${m.typeToken}". Valid: ${validTokens.join(', ')}`);
@@ -137,10 +136,6 @@ export async function scaffoldQuestion(input: ScaffoldInput): Promise<ScaffoldRe
     if (!m.buffer || m.buffer.length === 0) {
       errors.push(`media[${i}]: buffer is empty`);
     }
-    if (seenContexts.has(m.context)) {
-      errors.push(`media[${i}]: duplicate context "${m.context}" — each context may appear only once`);
-    }
-    seenContexts.add(m.context);
   });
 
   if (errors.length > 0) {

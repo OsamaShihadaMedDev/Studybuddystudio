@@ -85,7 +85,7 @@
   }
   .form-col { border-right: 1px solid var(--border); }
 
-  /* ── Section headers ─────────────────────────────────── */
+  /* ── Sections ─────────────────────────────────────────── */
   .section {
     margin-bottom: 24px;
     padding: 18px 18px 14px;
@@ -137,9 +137,11 @@
     background: var(--bg-input-focus);
   }
   input.invalid, textarea.invalid { border-color: var(--red); }
-  select { appearance: none; -webkit-appearance: none; cursor: pointer;
-    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
-                      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  select {
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
     background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
     background-size: 5px 5px;
     background-repeat: no-repeat;
@@ -213,56 +215,7 @@
   }
   .link-btn:hover:not(:disabled) { text-decoration: underline; filter: none; }
 
-  /* ── Media drop zones ────────────────────────────────── */
-  .media-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .dropzone {
-    border: 1.5px dashed var(--border-strong);
-    background: rgba(0,0,0,0.15);
-    padding: 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 80ms, background 80ms;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-height: 200px;
-  }
-  .dropzone.dragover {
-    border-style: solid;
-    border-color: var(--teal);
-    background: var(--teal-dim);
-  }
-  .dropzone-label {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    color: var(--text-dim);
-    text-transform: uppercase;
-  }
-  .dropzone-hint { color: var(--text-faint); font-size: 12px; }
-  .dropzone-preview {
-    max-width: 100%;
-    max-height: 120px;
-    object-fit: contain;
-    display: none;
-    margin: 0 auto;
-  }
-  .dropzone-preview.visible { display: block; }
-  .dropzone .filename {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--teal);
-    margin-top: 4px;
-    word-break: break-all;
-  }
-  .type-select-wrap { display: flex; align-items: center; gap: 6px; }
-  .type-select-wrap label { margin: 0; flex-shrink: 0; }
-
-  /* ── Buttons ─────────────────────────────────────────── */
+  /* ── Action buttons ──────────────────────────────────── */
   .actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -283,10 +236,7 @@
     border-radius: 0;
     transition: background 80ms, color 80ms, border-color 80ms;
   }
-  button.secondary {
-    background: transparent;
-    color: var(--teal);
-  }
+  button.secondary { background: transparent; color: var(--teal); }
   button:hover:not(:disabled) { filter: brightness(1.08); }
   button:disabled {
     background: rgba(255,255,255,0.04);
@@ -474,6 +424,142 @@
   }
   .clear-btn:hover { color: var(--teal); border-color: var(--teal); }
 
+  /* ── Custom select (replaces all native <select>) ────── */
+  .custom-select {
+    position: relative;
+    width: 100%;
+    user-select: none;
+  }
+  .cs-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 80ms, background 80ms;
+  }
+  .cs-trigger:hover,
+  .custom-select.cs-open .cs-trigger {
+    border-color: var(--teal);
+    background: var(--bg-input-focus);
+  }
+  .cs-arrow {
+    color: var(--text-dim);
+    font-size: 11px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: transform 120ms;
+  }
+  .custom-select.cs-open .cs-arrow { transform: rotate(180deg); }
+
+  .cs-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: #161b22;
+    border: 1px solid var(--border-strong);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .custom-select.cs-open .cs-dropdown { display: block; }
+
+  .cs-option {
+    padding: 9px 12px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 60ms, color 60ms;
+  }
+  .cs-option:hover    { background: rgba(0,180,216,0.12); color: var(--teal); }
+  .cs-option.cs-selected { background: var(--teal-dim); color: var(--teal); }
+
+  /* ── Multi-file media slots ──────────────────────────── */
+  .media-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .media-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border: 1px dashed var(--border-strong);
+    background: rgba(0,0,0,0.15);
+    min-height: 120px;
+  }
+  .media-slot-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .media-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .media-file-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+  }
+  .media-file-name {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--teal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .media-file-type { min-width: 110px; }
+  .media-file-remove {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    cursor: pointer;
+    letter-spacing: 0;
+    text-transform: none;
+    transition: color 80ms, border-color 80ms;
+  }
+  .media-file-remove:hover { color: var(--red); border-color: var(--red); }
+  .add-media-btn {
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 8px 12px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: color 80ms, border-color 80ms;
+    text-transform: none;
+  }
+  .add-media-btn:hover { color: var(--teal); border-color: var(--teal); }
+  .media-add-row { margin-top: 4px; }
+
   /* ── Scrollbars ───────────────────────────────────────── */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -496,47 +582,82 @@
     <div class="section">
       <h3 class="section-title">Metadata</h3>
       <div class="grid-4">
+
+        <!-- Subject -->
         <div class="field">
-          <label for="f-subject">Subject</label>
-          <select id="f-subject"></select>
+          <label>Subject</label>
+          <input type="hidden" id="f-subject" value="">
+          <div class="custom-select" id="cs-subject">
+            <div class="cs-trigger">
+              <span class="cs-value">—</span>
+              <span class="cs-arrow">▾</span>
+            </div>
+            <div class="cs-dropdown"></div>
+          </div>
           <div class="field-error" data-error-for="subject"></div>
         </div>
+
+        <!-- Domain -->
         <div class="field">
-          <label for="f-domain">Domain</label>
-          <select id="f-domain"></select>
+          <label>Domain</label>
+          <input type="hidden" id="f-domain" value="">
+          <div class="custom-select" id="cs-domain">
+            <div class="cs-trigger">
+              <span class="cs-value">—</span>
+              <span class="cs-arrow">▾</span>
+            </div>
+            <div class="cs-dropdown"></div>
+          </div>
           <div class="field-error" data-error-for="domain"></div>
         </div>
+
+        <!-- Difficulty -->
         <div class="field">
-          <label for="f-difficulty">Difficulty</label>
-          <select id="f-difficulty">
-            <option value="Easy">Easy</option>
-            <option value="Medium" selected>Medium</option>
-            <option value="Hard">Hard</option>
-          </select>
+          <label>Difficulty</label>
+          <input type="hidden" id="f-difficulty" value="Medium">
+          <div class="custom-select" id="cs-difficulty">
+            <div class="cs-trigger">
+              <span class="cs-value">Medium</span>
+              <span class="cs-arrow">▾</span>
+            </div>
+            <div class="cs-dropdown"></div>
+          </div>
         </div>
+
+        <!-- Reasoning Order -->
         <div class="field">
-          <label for="f-reasoning">Reasoning Order</label>
-          <select id="f-reasoning">
-            <option value="1st">1st</option>
-            <option value="2nd" selected>2nd</option>
-            <option value="3rd">3rd</option>
-          </select>
+          <label>Reasoning Order</label>
+          <input type="hidden" id="f-reasoning" value="2nd">
+          <div class="custom-select" id="cs-reasoning">
+            <div class="cs-trigger">
+              <span class="cs-value">2nd</span>
+              <span class="cs-arrow">▾</span>
+            </div>
+            <div class="cs-dropdown"></div>
+          </div>
         </div>
+
       </div>
+
       <div class="grid-2">
+        <!-- External ID -->
         <div class="field">
           <label for="f-id">External ID</label>
-          <input id="f-id" type="text" placeholder="CV-HISTO-013" autocomplete="off">
+          <input id="f-id" type="text" placeholder="Auto-filled on subject/domain select" autocomplete="off">
           <div class="id-status" id="id-status"></div>
         </div>
+
+        <!-- Competency -->
         <div class="field">
-          <label for="f-competency">Competency</label>
-          <select id="f-competency">
-            <option value="Foundational Science">Foundational Science</option>
-            <option value="Diagnosis – H&P">Diagnosis – H&P</option>
-            <option value="Diagnosis – Formulating">Diagnosis – Formulating</option>
-            <option value="Management – Pharmacotherapy">Management – Pharmacotherapy</option>
-          </select>
+          <label>Competency</label>
+          <input type="hidden" id="f-competency" value="Foundational Science">
+          <div class="custom-select" id="cs-competency">
+            <div class="cs-trigger">
+              <span class="cs-value">Foundational Science</span>
+              <span class="cs-arrow">▾</span>
+            </div>
+            <div class="cs-dropdown"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -611,42 +732,25 @@
     <div class="section">
       <h3 class="section-title">Media</h3>
       <div class="media-row">
-        <div class="dropzone" data-slot="stem">
-          <div class="dropzone-label">Stem Image</div>
-          <div class="dropzone-hint">Drag &amp; drop or click</div>
-          <img class="dropzone-preview" alt="">
-          <div class="type-select-wrap">
-            <label for="stem-type">Type</label>
-            <select id="stem-type" class="type-select">
-              <option value="histology">histology</option>
-              <option value="diagram" selected>diagram</option>
-              <option value="ecg">ecg</option>
-              <option value="xray">xray</option>
-              <option value="action_pot">action_pot</option>
-              <option value="pv_loop">pv_loop</option>
-            </select>
+
+        <div class="media-slot" id="stemSlot" data-context="stem">
+          <div class="media-slot-label">Stem Images</div>
+          <div class="media-file-list" id="stemFileList"></div>
+          <div class="media-add-row">
+            <button type="button" class="add-media-btn" id="addStemBtn">+ Add Stem Image</button>
+            <input type="file" id="stemFileInput" accept="image/*" hidden multiple>
           </div>
-          <div class="filename" data-filename></div>
-          <input type="file" accept="image/*" hidden>
         </div>
-        <div class="dropzone" data-slot="explanation">
-          <div class="dropzone-label">Explanation Image</div>
-          <div class="dropzone-hint">Drag &amp; drop or click</div>
-          <img class="dropzone-preview" alt="">
-          <div class="type-select-wrap">
-            <label for="exp-type">Type</label>
-            <select id="exp-type" class="type-select">
-              <option value="histology">histology</option>
-              <option value="diagram" selected>diagram</option>
-              <option value="ecg">ecg</option>
-              <option value="xray">xray</option>
-              <option value="action_pot">action_pot</option>
-              <option value="pv_loop">pv_loop</option>
-            </select>
+
+        <div class="media-slot" id="explanationSlot" data-context="explanation">
+          <div class="media-slot-label">Explanation Images</div>
+          <div class="media-file-list" id="explanationFileList"></div>
+          <div class="media-add-row">
+            <button type="button" class="add-media-btn" id="addExplanationBtn">+ Add Explanation Image</button>
+            <input type="file" id="explanationFileInput" accept="image/*" hidden multiple>
           </div>
-          <div class="filename" data-filename></div>
-          <input type="file" accept="image/*" hidden>
         </div>
+
       </div>
     </div>
 
@@ -691,14 +795,13 @@
     config: null,
     lastScaffoldedPath: null,
     expandedId: null,
-    media: { stem: null, explanation: null },
-    mediaDescriptions: { stem: '', explanation: '' },
+    mediaFiles: { stem: [], explanation: [] },
+    // mediaFiles[context] = array of { file: File, get typeToken(): string, row: HTMLElement }
   };
 
   const $  = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  // Canonical-name → DOM selector
   const FIELDS = {
     external_id:     '#f-id',
     subject:         '#f-subject',
@@ -717,6 +820,8 @@
     explanation:     '#explanation',
     teaching_point:  '#teachingPoint',
   };
+
+  const TYPE_TOKENS = ['diagram', 'ecg', 'histology', 'xray', 'action_pot', 'pv_loop'];
 
   // ── Log panel ──
   const logPanel = $('#log-panel');
@@ -809,8 +914,6 @@
       $('#correctOption').value  = (p.correct_option || 'a').toLowerCase();
       $('#teachingPoint').value  = p.teaching_point ?? '';
       $('#explanation').value    = p.explanation    ?? '';
-      state.mediaDescriptions.stem        = p.stem_media_description        ?? '';
-      state.mediaDescriptions.explanation = p.explanation_media_description ?? '';
 
       appendLog('✓ Question fields populated — review and edit as needed.', 'ok');
       showQuestionEditState();
@@ -823,39 +926,137 @@
     }
   }
 
-  // ── Config + dropdowns ──
+  // ── Custom select system ──
+  function csInit(wrapperId, options, initialValue, onChange) {
+    const wrapper  = document.getElementById(wrapperId);
+    const trigger  = wrapper.querySelector('.cs-trigger');
+    const valueEl  = wrapper.querySelector('.cs-value');
+    const dropdown = wrapper.querySelector('.cs-dropdown');
+
+    function setValue(val, label) {
+      valueEl.textContent = label ?? val;
+      const hidden = wrapper.closest('.field')?.querySelector('input[type="hidden"]');
+      if (hidden) hidden.value = val;
+      dropdown.querySelectorAll('.cs-option').forEach(o => {
+        o.classList.toggle('cs-selected', o.dataset.value === val);
+      });
+      if (onChange) onChange(val);
+    }
+
+    function buildOptions(opts) {
+      dropdown.innerHTML = '';
+      opts.forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'cs-option';
+        div.dataset.value = opt.value;
+        div.textContent = opt.label ?? opt.value;
+        div.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          setValue(opt.value, opt.label ?? opt.value);
+          wrapper.classList.remove('cs-open');
+        });
+        dropdown.appendChild(div);
+      });
+    }
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = wrapper.classList.contains('cs-open');
+      document.querySelectorAll('.custom-select.cs-open').forEach(el => el.classList.remove('cs-open'));
+      if (!isOpen) wrapper.classList.add('cs-open');
+    });
+
+    buildOptions(options);
+    setValue(initialValue, options.find(o => o.value === initialValue)?.label ?? initialValue);
+
+    wrapper._rebuild = (opts, newVal) => {
+      buildOptions(opts);
+      setValue(newVal, opts.find(o => o.value === newVal)?.label ?? newVal);
+    };
+  }
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select.cs-open').forEach(el => el.classList.remove('cs-open'));
+  });
+
   async function loadConfig() {
-    const res = await fetch('/api/config');
+    const res    = await fetch('/api/config');
     state.config = await res.json();
-    const subSel = $('#f-subject');
-    subSel.innerHTML = '';
-    state.config.subjects.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.name; opt.textContent = s.name;
-      subSel.appendChild(opt);
+
+    const subjects = state.config.subjects;
+    const subjectOpts = subjects.map(s => ({ value: s.name, label: s.name }));
+
+    csInit('cs-subject', subjectOpts, subjects[0].name, (val) => {
+      rebuildDomains(val);
+      fetchNextId();
     });
-    populateDomains();
+
+    csInit('cs-difficulty', [
+      { value: 'Easy',   label: 'Easy'   },
+      { value: 'Medium', label: 'Medium' },
+      { value: 'Hard',   label: 'Hard'   },
+    ], 'Medium', null);
+
+    csInit('cs-reasoning', [
+      { value: '1st', label: '1st' },
+      { value: '2nd', label: '2nd' },
+      { value: '3rd', label: '3rd' },
+    ], '2nd', null);
+
+    csInit('cs-competency', [
+      { value: 'Foundational Science',         label: 'Foundational Science'         },
+      { value: 'Diagnosis – H&P',              label: 'Diagnosis – H&P'              },
+      { value: 'Diagnosis – Formulating',      label: 'Diagnosis – Formulating'      },
+      { value: 'Management – Pharmacotherapy', label: 'Management – Pharmacotherapy' },
+    ], 'Foundational Science', null);
+
+    rebuildDomains(subjects[0].name);
   }
-  function populateDomains() {
-    const subject = state.config.subjects.find(s => s.name === $('#f-subject').value);
-    const domSel = $('#f-domain');
-    domSel.innerHTML = '';
+
+  function rebuildDomains(subjectName) {
+    const subject = state.config.subjects.find(s => s.name === subjectName);
     if (!subject) return;
-    subject.domains.forEach(d => {
-      const opt = document.createElement('option');
-      opt.value = d; opt.textContent = d;
-      domSel.appendChild(opt);
-    });
+    const domainOpts = subject.domains.map(d => ({ value: d.name, label: d.name }));
+    const csdom = document.getElementById('cs-domain');
+    if (csdom && csdom._rebuild) {
+      csdom._rebuild(domainOpts, domainOpts[0].value);
+      const hidden = document.getElementById('f-domain');
+      if (hidden) hidden.value = domainOpts[0].value;
+    } else {
+      csInit('cs-domain', domainOpts, domainOpts[0].value, () => {
+        validateId();
+        fetchNextId();
+      });
+    }
+    validateId();
+    fetchNextId();
   }
-  $('#f-subject').addEventListener('change', () => { populateDomains(); validateId(); });
-  $('#f-domain').addEventListener('change', validateId);
+
+  // ── Auto-ID ──
+  async function fetchNextId() {
+    const subject = document.getElementById('f-subject')?.value;
+    const domain  = document.getElementById('f-domain')?.value;
+    if (!subject || !domain) return;
+    try {
+      const res  = await fetch(`/api/next-id?subject=${encodeURIComponent(subject)}&domain=${encodeURIComponent(domain)}`);
+      const data = await res.json();
+      if (data.nextId) {
+        const idField = document.getElementById('f-id');
+        if (!idField.value || idField.dataset.autoFilled === 'true') {
+          idField.value = data.nextId;
+          idField.dataset.autoFilled = 'true';
+          validateId();
+        }
+      }
+    } catch { /* silently fail */ }
+  }
 
   // ── ID validation ──
   let validateTimer = null;
   async function validateId() {
     const id = $('#f-id').value.trim();
     const subject = $('#f-subject').value;
-    const domain = $('#f-domain').value;
+    const domain  = $('#f-domain').value;
     const status = $('#id-status');
     status.textContent = '';
     status.className = 'id-status';
@@ -873,48 +1074,103 @@
   }
   $('#f-id').addEventListener('blur', validateId);
   $('#f-id').addEventListener('input', () => {
+    $('#f-id').dataset.autoFilled = 'false';
     clearTimeout(validateTimer);
     validateTimer = setTimeout(validateId, 400);
   });
 
-  // ── Media drop zones ──
-  function setupDropzone(zone) {
-    const slot = zone.dataset.slot;
-    const input = zone.querySelector('input[type="file"]');
-    const preview = zone.querySelector('.dropzone-preview');
-    const filenameEl = zone.querySelector('[data-filename]');
-    const typeSel = zone.querySelector('.type-select');
-    const hint = zone.querySelector('.dropzone-hint');
+  // ── Multi-file media system ──
+  function addMediaFile(context, file) {
+    const listEl = document.getElementById(context === 'stem' ? 'stemFileList' : 'explanationFileList');
 
-    const updateFilename = () => {
-      if (!state.media[slot]) { filenameEl.textContent = ''; return; }
-      const ext = (state.media[slot].name.match(/\.[^.]+$/) || ['.png'])[0].toLowerCase();
-      filenameEl.textContent = `→ ${slot}.${typeSel.value}${ext}`;
-    };
-    const acceptFile = (file) => {
-      if (!file) return;
-      state.media[slot] = file;
-      preview.src = URL.createObjectURL(file);
-      preview.classList.add('visible');
-      hint.style.display = 'none';
-      updateFilename();
-    };
-    zone.addEventListener('click', (e) => {
-      if (e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL') return;
-      input.click();
+    const row = document.createElement('div');
+    row.className = 'media-file-row';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'media-file-name';
+    nameEl.title = file.name;
+    nameEl.textContent = file.name;
+
+    const typeWrapper = document.createElement('div');
+    typeWrapper.className = 'custom-select media-file-type';
+    typeWrapper.innerHTML = `
+      <div class="cs-trigger" style="padding:5px 8px;font-size:12px;">
+        <span class="cs-value">diagram</span>
+        <span class="cs-arrow">▾</span>
+      </div>
+      <div class="cs-dropdown"></div>
+    `;
+
+    const innerDropdown = typeWrapper.querySelector('.cs-dropdown');
+    const innerValue    = typeWrapper.querySelector('.cs-value');
+    let selectedType    = 'diagram';
+
+    function updateRowFilename() {
+      const ext = (file.name.match(/\.[^.]+$/) || ['.png'])[0];
+      nameEl.textContent = `${context}.${selectedType}${ext}`;
+      nameEl.title = `${context}.${selectedType}${ext} (original: ${file.name})`;
+    }
+
+    TYPE_TOKENS.forEach(token => {
+      const opt = document.createElement('div');
+      opt.className = 'cs-option' + (token === 'diagram' ? ' cs-selected' : '');
+      opt.dataset.value = token;
+      opt.textContent = token;
+      opt.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectedType = token;
+        innerValue.textContent = token;
+        innerDropdown.querySelectorAll('.cs-option').forEach(o =>
+          o.classList.toggle('cs-selected', o.dataset.value === token)
+        );
+        typeWrapper.classList.remove('cs-open');
+        updateRowFilename();
+      });
+      innerDropdown.appendChild(opt);
     });
-    input.addEventListener('change', () => acceptFile(input.files[0]));
-    typeSel.addEventListener('change', updateFilename);
-    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-    zone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      zone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) acceptFile(file);
+
+    typeWrapper.querySelector('.cs-trigger').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = typeWrapper.classList.contains('cs-open');
+      document.querySelectorAll('.custom-select.cs-open').forEach(el => el.classList.remove('cs-open'));
+      if (!isOpen) typeWrapper.classList.add('cs-open');
     });
+
+    updateRowFilename();
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'media-file-remove';
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', () => {
+      const idx = state.mediaFiles[context].findIndex(m => m.row === row);
+      if (idx !== -1) state.mediaFiles[context].splice(idx, 1);
+      row.remove();
+    });
+
+    row.appendChild(nameEl);
+    row.appendChild(typeWrapper);
+    row.appendChild(removeBtn);
+    listEl.appendChild(row);
+
+    const entry = { file, get typeToken() { return selectedType; }, row };
+    state.mediaFiles[context].push(entry);
   }
-  $$('.dropzone').forEach(setupDropzone);
+
+  document.getElementById('addStemBtn').addEventListener('click', () => {
+    document.getElementById('stemFileInput').click();
+  });
+  document.getElementById('addExplanationBtn').addEventListener('click', () => {
+    document.getElementById('explanationFileInput').click();
+  });
+  document.getElementById('stemFileInput').addEventListener('change', (e) => {
+    Array.from(e.target.files).forEach(f => addMediaFile('stem', f));
+    e.target.value = '';
+  });
+  document.getElementById('explanationFileInput').addEventListener('change', (e) => {
+    Array.from(e.target.files).forEach(f => addMediaFile('explanation', f));
+    e.target.value = '';
+  });
 
   // ── Read fields + validate ──
   function getAllFields() {
@@ -975,21 +1231,27 @@
       if (el.tagName === 'SELECT') el.selectedIndex = 0;
       else el.value = '';
     });
-    populateDomains();
-    state.media = { stem: null, explanation: null };
-    state.mediaDescriptions = { stem: '', explanation: '' };
-    $$('.dropzone').forEach(z => {
-      z.querySelector('.dropzone-preview').classList.remove('visible');
-      z.querySelector('[data-filename]').textContent = '';
-      z.querySelector('.dropzone-hint').style.display = '';
-      z.querySelector('input[type="file"]').value = '';
-    });
+    const firstSubject = state.config?.subjects?.[0];
+    if (firstSubject) {
+      const cssub = document.getElementById('cs-subject');
+      if (cssub?._rebuild) {
+        const subjectOpts = state.config.subjects.map(s => ({ value: s.name, label: s.name }));
+        cssub._rebuild(subjectOpts, firstSubject.name);
+      }
+      $('#f-subject').value = firstSubject.name;
+      rebuildDomains(firstSubject.name);
+    }
+    state.mediaFiles = { stem: [], explanation: [] };
+    document.getElementById('stemFileList').innerHTML = '';
+    document.getElementById('explanationFileList').innerHTML = '';
     $('#id-status').textContent = '';
     clearErrors();
     state.lastScaffoldedPath = null;
     resetButtons();
     $('#questionPasteArea').value = '';
     showQuestionPasteState();
+    $('#f-id').dataset.autoFilled = 'true';
+    fetchNextId();
   }
 
   btnCreate.addEventListener('click', async () => {
@@ -1003,12 +1265,16 @@
     const data = getAllFields();
     const fd = new FormData();
     Object.entries(data).forEach(([k, v]) => fd.append(k, v));
-    fd.append('stemType', $('#stem-type').value);
-    fd.append('explanationType', $('#exp-type').value);
-    fd.append('stemMediaDescription', state.mediaDescriptions.stem ?? '');
-    fd.append('explanationMediaDescription', state.mediaDescriptions.explanation ?? '');
-    if (state.media.stem)        fd.append('stemMedia', state.media.stem);
-    if (state.media.explanation) fd.append('explanationMedia', state.media.explanation);
+    state.mediaFiles.stem.forEach((entry, i) => {
+      fd.append('stemMedia', entry.file);
+      fd.append(`stemType_${i}`, entry.typeToken);
+      fd.append(`stemMediaDescription_${i}`, '');
+    });
+    state.mediaFiles.explanation.forEach((entry, i) => {
+      fd.append('explanationMedia', entry.file);
+      fd.append(`explanationType_${i}`, entry.typeToken);
+      fd.append(`explanationMediaDescription_${i}`, '');
+    });
 
     try {
       const res = await fetch('/api/scaffold', { method: 'POST', body: fd });
@@ -1052,11 +1318,12 @@
         buffer = lines.pop();
         for (const line of lines) {
           if (!line.trim()) continue;
+          if (/DEBUG/.test(line)) continue;
           appendLog(line, classifyLine(line));
           if (/✗|failed|error/i.test(line)) hadError = true;
         }
       }
-      if (buffer.trim()) appendLog(buffer, classifyLine(buffer));
+      if (buffer.trim() && !/DEBUG/.test(buffer)) appendLog(buffer, classifyLine(buffer));
 
       if (hadError) {
         btnPush.className = 'error';

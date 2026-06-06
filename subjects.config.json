@@ -5,12 +5,12 @@
       "prefix": "CV",
       "folder": "cardiovascular",
       "domains": [
-        "Anatomy",
-        "Embryology",
-        "Histopathology",
-        "Pathology",
-        "Physiology",
-        "Pharmacology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Embryology",     "abbrev": "EMBRYO" },
+        { "name": "Histopathology", "abbrev": "HISTO"  },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  }
       ]
     },
     {
@@ -18,10 +18,13 @@
       "prefix": "RE",
       "folder": "renal",
       "domains": [
-        "Anatomy",
-        "Physiology",
-        "Pathology",
-        "Pharmacology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Embryology",     "abbrev": "EMBRYO" },
+        { "name": "Histopathology", "abbrev": "HISTO"  },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Biochemistry",   "abbrev": "BIOC"   }
       ]
     },
     {
@@ -29,11 +32,12 @@
       "prefix": "GI",
       "folder": "gastrointestinal",
       "domains": [
-        "Anatomy",
-        "Physiology",
-        "Pathology",
-        "Pharmacology",
-        "Embryology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Embryology",     "abbrev": "EMBRYO" },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Microbiology",   "abbrev": "MICRO"  }
       ]
     },
     {
@@ -41,10 +45,11 @@
       "prefix": "RS",
       "folder": "respiratory",
       "domains": [
-        "Anatomy",
-        "Physiology",
-        "Pathology",
-        "Pharmacology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Microbiology",   "abbrev": "MICRO"  }
       ]
     },
     {
@@ -52,11 +57,12 @@
       "prefix": "NE",
       "folder": "neurology",
       "domains": [
-        "Anatomy",
-        "Physiology",
-        "Pathology",
-        "Pharmacology",
-        "Embryology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Embryology",     "abbrev": "EMBRYO" },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Microbiology",   "abbrev": "MICRO"  }
       ]
     },
     {
@@ -64,10 +70,12 @@
       "prefix": "MS",
       "folder": "musculoskeletal",
       "domains": [
-        "Anatomy",
-        "Physiology",
-        "Pathology",
-        "Pharmacology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Immunology",     "abbrev": "IMMUN"  },
+        { "name": "Genetics",       "abbrev": "GENET"  }
       ]
     },
     {
@@ -75,10 +83,12 @@
       "prefix": "EN",
       "folder": "endocrine",
       "domains": [
-        "Anatomy",
-        "Physiology",
-        "Pathology",
-        "Pharmacology"
+        { "name": "Anatomy",        "abbrev": "ANAT"   },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Biochemistry",   "abbrev": "BIOC"   },
+        { "name": "Genetics",       "abbrev": "GENET"  }
       ]
     },
     {
@@ -86,9 +96,13 @@
       "prefix": "HE",
       "folder": "hematology",
       "domains": [
-        "Physiology",
-        "Pathology",
-        "Pharmacology"
+        { "name": "Physiology",     "abbrev": "PHYSIO" },
+        { "name": "Pathology",      "abbrev": "PATH"   },
+        { "name": "Pharmacology",   "abbrev": "PHARM"  },
+        { "name": "Histopathology", "abbrev": "HISTO"  },
+        { "name": "Biochemistry",   "abbrev": "BIOC"   },
+        { "name": "Genetics",       "abbrev": "GENET"  },
+        { "name": "Immunology",     "abbrev": "IMMUN"  }
       ]
     }
   ]
